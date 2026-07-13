@@ -11,9 +11,7 @@ const BottomNavbar = () => {
 
   // Admin contact details to show to users
   const adminContact = {
-    name: 'Kedar Sutar',
-    email: 'kedarsutar14@gmail.com',
-    mobile: '9623744227'
+    email: 'Artizio@gmail.com',
   };
 
   return (
@@ -36,15 +34,6 @@ const BottomNavbar = () => {
             </div>
           </div>
 
-          {/* Admin Name */}
-          <div className="flex items-center gap-3">
-            <User size={18} className="text-amber-400" />
-            <div>
-              <p className="text-xs text-gray-400">Admin</p>
-              <p className="text-sm text-gray-200">{adminContact.name}</p>
-            </div>
-          </div>
-
           {/* Admin Email */}
           <div className="flex items-center gap-3">
             <Mail size={18} className="text-amber-400" />
@@ -54,18 +43,10 @@ const BottomNavbar = () => {
             </div>
           </div>
 
-          {/* Admin Contact Number */}
-          <div className="flex items-center gap-3">
-            <Phone size={18} className="text-amber-400" />
-            <div>
-              <p className="text-xs text-gray-400">Contact</p>
-              <p className="text-sm text-gray-200">{adminContact.mobile}</p>
-            </div>
-          </div>
 
           {/* Copyright */}
           <div className="text-xs text-gray-500">
-            © {new Date().getFullYear()} ArtVault
+            © {new Date().getFullYear()} Artizio
           </div>
         </div>
       </div>

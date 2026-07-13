@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { artworkAPI } from '../../services/api';
+import { artworkAPI } from '../services/api';
 
 const ManageArtworks = () => {
   const [artworks, setArtworks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingArtwork, setEditingArtwork] = useState(null);
   
-  const categories = ['paintings', 'sketches', 'digital', 'watercolors', 'mixed-media'];
+  const categories = ['paintings', 'sketches', 'digital', 'watercolors', 'mixed-media', 'sculpture', 'photography'];
 
   useEffect(() => {
     fetchArtworks();
   }, []);
 
   const fetchArtworks = async () => {
+    setLoading(true);
     try {
-      const response = await artworkAPI.getAll();
-      setArtworks(response.data.data);
+      const response = await artworkAPI.getMyArtworks();
+      console.log('Fetched artworks:', response.data);
+      setArtworks(response.data.data || []);
     } catch (error) {
       console.error('Fetch error:', error);
-      toast.error('Failed to load artworks');
+      toast.error(error.response?.data?.message || 'Failed to load artworks');
+      setArtworks([]);
     } finally {
       setLoading(false);
     }
@@ -35,7 +38,7 @@ const ManageArtworks = () => {
       fetchArtworks();
     } catch (error) {
       console.error('Update error:', error);
-      toast.error('Update failed');
+      toast.error(error.response?.data?.message || 'Update failed');
     }
   };
 
@@ -47,7 +50,7 @@ const ManageArtworks = () => {
         fetchArtworks();
       } catch (error) {
         console.error('Delete error:', error);
-        toast.error('Delete failed');
+        toast.error(error.response?.data?.message || 'Delete failed');
       }
     }
   };
@@ -56,12 +59,23 @@ const ManageArtworks = () => {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-amber-600 mx-auto"></div>
+        <p className="text-gray-500 mt-4">Loading artworks...</p>
       </div>
     );
   }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">My Artworks</h2>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'artistUpload' }))}
+          className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+        >
+          Upload New
+        </button>
+      </div>
+
       {editingArtwork ? (
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <h2 className="text-xl font-bold mb-4">Edit Artwork</h2>
@@ -89,7 +103,7 @@ const ManageArtworks = () => {
                 className="p-3 border rounded-lg focus:ring-2 focus:ring-amber-500"
               >
                 {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
                 ))}
               </select>
               <input
@@ -98,7 +112,6 @@ const ManageArtworks = () => {
                 value={editingArtwork.dimensions}
                 onChange={(e) => setEditingArtwork({...editingArtwork, dimensions: e.target.value})}
                 className="p-3 border rounded-lg focus:ring-2 focus:ring-amber-500"
-                required
               />
               <input
                 type="text"
@@ -106,7 +119,6 @@ const ManageArtworks = () => {
                 value={editingArtwork.medium}
                 onChange={(e) => setEditingArtwork({...editingArtwork, medium: e.target.value})}
                 className="p-3 border rounded-lg focus:ring-2 focus:ring-amber-500"
-                required
               />
               <input
                 type="number"
@@ -114,18 +126,8 @@ const ManageArtworks = () => {
                 value={editingArtwork.yearCreated}
                 onChange={(e) => setEditingArtwork({...editingArtwork, yearCreated: parseInt(e.target.value)})}
                 className="p-3 border rounded-lg focus:ring-2 focus:ring-amber-500"
-                required
               />
             </div>
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={editingArtwork.isFeatured}
-                onChange={(e) => setEditingArtwork({...editingArtwork, isFeatured: e.target.checked})}
-                className="mr-2 cursor-pointer"
-              />
-              <span className="text-gray-700">Featured Artwork</span>
-            </label>
             <div className="flex space-x-3">
               <button type="submit" className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition">
                 Update Artwork
@@ -142,44 +144,56 @@ const ManageArtworks = () => {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {artworks.map((artwork) => (
-          <div key={artwork._id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <img 
-              src={artwork.imageUrl} 
-              alt={artwork.title} 
-              className="w-full h-48 object-cover" 
-            />
-            <div className="p-4">
-              <h3 className="font-bold text-lg mb-1">{artwork.title}</h3>
-              <p className="text-gray-600 text-sm mb-2 line-clamp-2">{artwork.description}</p>
-              <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-                <span>{artwork.category}</span>
-                <span>{artwork.yearCreated}</span>
-              </div>
-              {artwork.isFeatured && (
-                <span className="inline-block bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full mb-2">
-                  Featured
-                </span>
-              )}
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setEditingArtwork(artwork)}
-                  className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteArtwork(artwork._id)}
-                  className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition"
-                >
-                  Delete
-                </button>
+      {artworks.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl">
+          <p className="text-gray-500">No artworks uploaded yet.</p>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'artistUpload' }))}
+            className="mt-4 px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+          >
+            Upload Your First Artwork
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {artworks.map((artwork) => (
+            <div key={artwork._id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <img 
+                src={artwork.imageUrl} 
+                alt={artwork.title} 
+                className="w-full h-48 object-cover" 
+              />
+              <div className="p-4">
+                <h3 className="font-bold text-lg mb-1">{artwork.title}</h3>
+                <p className="text-gray-600 text-sm mb-2 line-clamp-2">{artwork.description}</p>
+                <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+                  <span>{artwork.category}</span>
+                  <span>{artwork.yearCreated}</span>
+                </div>
+                {artwork.isFeatured && (
+                  <span className="inline-block bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full mb-2">
+                    Featured
+                  </span>
+                )}
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setEditingArtwork(artwork)}
+                    className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteArtwork(artwork._id)}
+                    className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

@@ -1,78 +1,79 @@
-import React from 'react';
+// src/components/HeroSection.jsx
+import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Palette, Brush, Star } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import HeroTextSection from './HeroTextSection';
+import FeaturedArtworksCarousel from './FeaturedArtworksCarousel';
 
 const HeroSection = ({ featuredArtworks }) => {
-  const topFeatured = featuredArtworks?.slice(0, 3) || [];
+  const containerRef = useRef(null);
+  const wallArtworks = featuredArtworks?.slice(0, 6) || [];
 
   return (
-    <div className="relative text-white overflow-hidden" style={{ minHeight: '100vh' }}>
+    <section 
+      ref={containerRef} 
+      className="relative min-h-screen bg-[#181614] overflow-hidden text-[#EDE6D6]"
+      style={{ 
+        backgroundColor: '#181614',
+        marginTop: 0, // Remove any margin
+        paddingTop: 0 // Remove any padding
+      }}
+    >
+      {/* ─── BACKGROUND GRAIN ─── */}
+      <svg className="absolute inset-0 w-full h-full opacity-[0.06] pointer-events-none z-0" aria-hidden="true">
+        <filter id="grain-hero">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain-hero)" />
+      </svg>
 
-      {/* ── Spline 3D Background — fully interactive ── */}
-      <div className="absolute inset-0 z-0" style={{ overflow: 'hidden' }}>
-        <iframe
-          src="https://my.spline.design/glassmaskcopycopy-fcOLgHz9d4pm4u2aVMU4hzFe-AMN/"
-          frameBorder="0"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '100vw',
-            height: '100vh',
-            minWidth: '100%',
-            minHeight: '100%',
-            border: 'none',
-            // NO pointerEvents: 'none' — mouse events flow into Spline
-          }}
+      {/* ─── AMBIENT SPOTLIGHT ─── */}
+      <div 
+        className="absolute top-0 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
+        style={{
+          width: '80vw',
+          height: '100%',
+          background: 'radial-gradient(ellipse 50% 70% at 50% 40%, rgba(201,162,39,0.08) 0%, rgba(201,162,39,0.02) 45%, transparent 75%)',
+        }}
+      />
+
+      <div className="relative z-20 container mx-auto px-6 flex flex-col justify-center  min-h-screen pt-20 md:pt-24 pb-12">
+        
+        {/* ─── HERO TEXT SECTION ─── */}
+        <HeroTextSection 
+  eyebrow="For Artists, By Artists"
+  title1="Made To"
+  title2="Be Found"
+  subtitle={
+    <>
+      Stop waiting to be discovered. Upload your work and let{' '}
+      <span style={{ color: '#C9A227', fontWeight: 600 }}>Artizio</span> bring the world to you.
+    </>
+  }
+  accentColor="#C9A227"
+  textColor="#EDE6D6"
+/>
+
+        {/* ─── FEATURED ARTWORKS CAROUSEL ─── */}
+        <div className="mt-16 md:mt-30">
+        <FeaturedArtworksCarousel 
+          artworks={wallArtworks}
+          accentColor="#C9A227"
+          textColor="#EDE6D6"
         />
-      </div>
-
-      
-
-      {/* ── Hero Content — z-20 so buttons/cards stay clickable ── */}
-      <div className="container mx-auto px-6 py-20 relative z-20"style={{ pointerEvents: 'none' }}>
+        </div>
+        {/* ─── SCROLL INDICATOR ─── */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center"
-          style={{ pointerEvents: 'none' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.8, duration: 0.8 }}
+          className="flex justify-center mt-8 md:mt-12"
         >
-          {/* Featured Artworks Preview */}
-          {topFeatured.length > 0 && (
-            <div className="mt-12">
-              <p className="text-gray-400 mb-4 tracking-widest uppercase text-sm"
-                style={{ pointerEvents: 'none' }}
-              >
-                Featured Masterpieces
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                {topFeatured.map((artwork, index) => (
-                  <motion.div
-                    key={artwork._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.2 }}
-                    className="relative group cursor-pointer rounded-xl overflow-hidden shadow-2xl"
-                    style={{ pointerEvents: 'auto' }} // cards are clickable
-                  >
-                    <img
-                      src={artwork.imageUrl}
-                      alt={artwork.title}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition duration-300 flex items-end p-4 backdrop-blur-[2px]">
-                      <p className="text-white font-semibold">{artwork.title}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
+          <ChevronDown size={22} className="text-[#EDE6D6]/30 animate-bounce" />
         </motion.div>
       </div>
-    </div>
+    </section>
   );
 };
 

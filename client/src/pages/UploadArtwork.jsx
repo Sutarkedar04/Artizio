@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { artworkAPI } from '../../services/api';
+import { artworkAPI } from '../services/api';
 
 const CATEGORIES = [
   { id: 'paintings', label: 'Paintings', description: 'Oil, Acrylic, Canvas artworks' },
@@ -18,8 +18,7 @@ const UploadArtwork = () => {
     category: 'paintings',
     dimensions: '',
     medium: '',
-    yearCreated: new Date().getFullYear(),
-    isFeatured: false
+    yearCreated: new Date().getFullYear()
   });
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -203,16 +202,6 @@ const UploadArtwork = () => {
           />
         </div>
         
-        {/* Featured Checkbox */}
-        <label className="flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.isFeatured}
-            onChange={(e) => setFormData({...formData, isFeatured: e.target.checked})}
-            className="mr-2 cursor-pointer w-4 h-4 text-amber-600"
-          />
-          <span className="text-gray-700">Mark as Featured Artwork (appears in hero section)</span>
-        </label>
         
         {/* Image Upload */}
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">

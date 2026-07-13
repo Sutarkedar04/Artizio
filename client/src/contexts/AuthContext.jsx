@@ -54,25 +54,52 @@ export const AuthProvider = ({ children }) => {
       toast.success(`Welcome back, ${userData.name}!`);
       return { success: true };
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
-      return { success: false, error: error.response?.data?.message };
+      const message = error.response?.data?.message || 'Login failed';
+      const unverified = error.response?.data?.unverified === true;
+      toast.error(message);
+      return { success: false, error: message, unverified };
     }
   };
 
   const register = async (userData) => {
     try {
       const response = await axios.post(`${API_URL}/api/users/register`, userData);
-      const { token: authToken, ...newUser } = response.data.data;
+      toast.success(response.data.message || 'Account created! Please check your email to verify your account.');
+      return { success: true, email: response.data.data?.email };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const verifyEmail = async (verificationToken) => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users/verify-email/${verificationToken}`);
+      const { token: authToken, ...userData } = response.data.data;
       localStorage.setItem('token', authToken);
       setToken(authToken);
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-      setUser(newUser);
+      setUser(userData);
       setIsLoggedIn(true);
-      toast.success('Account created successfully!');
+      toast.success('Email verified! Welcome to ArtVault.');
       return { success: true };
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
-      return { success: false, error: error.response?.data?.message };
+      const message = error.response?.data?.message || 'Verification failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const resendVerification = async (email) => {
+    try {
+      const response = await axios.post(`${API_URL}/api/users/resend-verification`, { email });
+      toast.success(response.data.message);
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to resend verification email';
+      toast.error(message);
+      return { success: false, error: message };
     }
   };
 
@@ -86,7 +113,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (updatedUser) => {
-    setUser(updatedUser);
+    setUser(prev => ({ ...prev, ...updatedUser }));
   };
 
   return (
@@ -97,6 +124,8 @@ export const AuthProvider = ({ children }) => {
       loading,
       login,
       register,
+      verifyEmail,
+      resendVerification,
       logout,
       updateUser,
       isAdmin: user?.role === 'admin'

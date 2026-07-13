@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { Clock, CheckCircle, XCircle, Package, Trash2, AlertCircle } from 'lucide-react';
-import { commissionAPI } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { commissionAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { goToPage } from '../utils/navigation'; // Import the goToPage function
 
 const UserDashboard = () => {
   const { user } = useAuth();
@@ -65,6 +66,16 @@ const UserDashboard = () => {
     return status === 'pending' || status === 'accepted';
   };
 
+  // Handle artist profile navigation
+  const handleArtistClick = (artistId, artistName) => {
+    if (!artistId) {
+      toast.error('Artist profile not available');
+      return;
+    }
+    // Use goToPage to navigate to artist profile
+    goToPage('artistProfile', { artistId });
+  };
+
   return (
     <div className="container mx-auto px-6 py-12">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -120,7 +131,18 @@ const UserDashboard = () => {
                       )}
                     </div>
                   </div>
-
+                  
+                  {/* Artist Name - Clickable to navigate to artist profile */}
+                  <p className="text-sm text-gray-500 mb-2">
+  Artist:{' '}
+  <button
+    onClick={() => goToPage('artistProfile', { artistId: commission.artist })}
+    className="font-medium text-amber-600 hover:text-amber-700 hover:underline"
+  >
+    {commission.artistName}
+  </button>
+</p>
+                  
                   <p className="text-gray-700 mb-4">{commission.description}</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">

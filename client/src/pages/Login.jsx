@@ -8,14 +8,24 @@ const Login = ({ onSwitchToRegister, onForgotPassword }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [showResend, setShowResend] = useState(false);
+  const { login, resendVerification } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setShowResend(false);
     const result = await login(email, password);
     setLoading(false);
+    if (!result.success && result.unverified) {
+      setShowResend(true);
+    }
   };
+
+  const handleResend = async () => {
+    await resendVerification(email);
+  };
+  
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-6">
@@ -44,7 +54,7 @@ const Login = ({ onSwitchToRegister, onForgotPassword }) => {
               />
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Password
@@ -69,7 +79,19 @@ const Login = ({ onSwitchToRegister, onForgotPassword }) => {
             </div>
           </div>
 
-          {/* Forgot Password Link */}
+          {showResend && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+              <p className="text-amber-800 mb-2">Your account isn't verified yet.</p>
+              <button
+                type="button"
+                onClick={handleResend}
+                className="text-amber-700 font-medium hover:text-amber-900 underline"
+              >
+                Resend verification email
+              </button>
+            </div>
+          )}
+
           <div className="text-right">
             <button
               type="button"

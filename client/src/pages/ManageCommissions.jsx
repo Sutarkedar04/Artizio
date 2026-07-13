@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { User, Mail, Phone, CheckCircle, XCircle, Clock, Package, Trash2, Eye } from 'lucide-react';
-import { commissionAPI } from '../../services/api';
+import { User, Mail, Phone, CheckCircle, XCircle, Clock, Package, Eye } from 'lucide-react';
+import { commissionAPI } from '../services/api';
 
 const ManageCommissions = () => {
   const [commissions, setCommissions] = useState([]);
@@ -14,7 +14,7 @@ const ManageCommissions = () => {
 
   const fetchCommissions = async () => {
     try {
-      const response = await commissionAPI.getAll();
+      const response = await commissionAPI.getArtistCommissions();
       setCommissions(response.data.data);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -24,37 +24,45 @@ const ManageCommissions = () => {
     }
   };
 
+  const CURRENCY_SYMBOLS = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+
+const formatMoney = (amount, currency = 'INR') => {
+  const symbol = CURRENCY_SYMBOLS[currency] || '₹';
+  return `${symbol}${Number(amount).toLocaleString('en-IN')}`;
+};
+
   const handleUpdateStatus = async (id, status) => {
     try {
       let notes = '';
+      let agreedPrice;
+
       if (status === 'rejected') {
         notes = prompt('Please provide a reason for rejection:');
         if (!notes) return;
       } else if (status === 'accepted') {
+        const priceInput = prompt('Agreed price for this commission (USD, optional):');
+        if (priceInput) {
+          const parsed = Number(priceInput);
+          if (Number.isNaN(parsed) || parsed < 0) {
+            toast.error('Please enter a valid price');
+            return;
+          }
+          agreedPrice = parsed;
+        }
         notes = prompt('Add any notes for the client (optional):') || '';
       } else if (status === 'completed') {
         notes = prompt('Add completion notes (optional):') || '';
       }
-      
-      await commissionAPI.updateStatus(id, { status, statusNotes: notes });
+
+      const payload = { status, statusNotes: notes };
+      if (agreedPrice !== undefined) payload.agreedPrice = agreedPrice;
+
+      await commissionAPI.updateArtistStatus(id, payload);
       toast.success(`Commission ${status} successfully!`);
       fetchCommissions();
     } catch (error) {
       console.error('Update error:', error);
       toast.error(error.response?.data?.message || 'Failed to update status');
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this commission request?')) {
-      try {
-        await commissionAPI.delete(id);
-        toast.success('Commission deleted successfully');
-        fetchCommissions();
-      } catch (error) {
-        console.error('Delete error:', error);
-        toast.error('Delete failed');
-      }
     }
   };
 
@@ -75,7 +83,7 @@ const ManageCommissions = () => {
       accepted: <CheckCircle size={16} />,
       rejected: <XCircle size={16} />,
       completed: <Package size={16} />,
-      cancelled: <Trash2 size={16} />
+      cancelled: <XCircle size={16} />
     };
     return icons[status] || null;
   };
@@ -100,7 +108,7 @@ const ManageCommissions = () => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <h2 className="text-2xl font-bold mb-6">Commission Requests</h2>
-      
+
       {commissions.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl">
           <p className="text-gray-500">No commission requests yet.</p>
@@ -114,15 +122,15 @@ const ManageCommissions = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <User size={18} className="text-amber-600" />
-                      <span className="font-semibold">{commission.user?.name || commission.name}</span>
+                      <span className="font-semibold">{commission.requester?.name || commission.requesterName}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Mail size={18} className="text-amber-600" />
-                      <span className="text-gray-600">{commission.user?.email || commission.email}</span>
+                      <span className="text-gray-600">{commission.requester?.email || commission.requesterEmail}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Phone size={18} className="text-amber-600" />
-                      <span className="text-gray-600">{commission.user?.mobileNumber || commission.mobileNumber || 'N/A'}</span>
+                      <span className="text-gray-600">{commission.requester?.mobileNumber || commission.requesterMobile || 'N/A'}</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -135,8 +143,8 @@ const ManageCommissions = () => {
 
                 <div className="border-t pt-4 mt-4">
                   <p className="text-gray-700 mb-4">{commission.description}</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     {commission.dimensions && (
                       <div className="bg-gray-50 p-2 rounded">
                         <p className="text-xs text-gray-500">Dimensions</p>
@@ -145,8 +153,14 @@ const ManageCommissions = () => {
                     )}
                     {commission.budget && (
                       <div className="bg-gray-50 p-2 rounded">
-                        <p className="text-xs text-gray-500">Budget</p>
-                        <p className="text-sm font-medium">${commission.budget}</p>
+                        <p className="text-xs text-gray-500">Client Budget</p>
+                        <p className="text-sm font-medium">{formatMoney(commission.budget, commission.currency)}</p>
+                      </div>
+                    )}
+                    {commission.agreedPrice && (
+                      <div className="bg-green-50 p-2 rounded">
+                        <p className="text-xs text-gray-500">Agreed Price</p>
+                        <p className="text-sm font-medium">{formatMoney(commission.agreedPrice, commission.currency)}</p>
                       </div>
                     )}
                     {commission.deadline && (
@@ -208,12 +222,6 @@ const ManageCommissions = () => {
                       <Package size={16} /> Mark as Completed
                     </button>
                   )}
-                  <button
-                    onClick={() => handleDelete(commission._id)}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition flex items-center gap-2"
-                  >
-                    <Trash2 size={16} /> Delete Request
-                  </button>
                 </div>
               </div>
             </div>

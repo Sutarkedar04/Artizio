@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Mail, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Register = ({ onSwitchToLogin }) => {
@@ -10,14 +11,57 @@ const Register = ({ onSwitchToLogin }) => {
     password: ''
   });
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const [registered, setRegistered] = useState(false);
+  const { register, resendVerification } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     const result = await register(formData);
     setLoading(false);
+    if (result.success) {
+      setRegistered(true);
+    }
   };
+
+  const handleResend = async () => {
+    await resendVerification(formData.email);
+  };
+
+  if (registered) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
+        >
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle size={32} className="text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Check Your Email</h2>
+          <p className="text-gray-600 mb-2">
+            We've sent a verification link to <strong>{formData.email}</strong>.
+          </p>
+          <p className="text-gray-500 text-sm mb-6">
+            Click the link in that email to activate your account. It expires in 24 hours.
+          </p>
+          <button
+            onClick={handleResend}
+            className="text-amber-600 hover:text-amber-700 text-sm font-medium mb-4"
+          >
+            Didn't get it? Resend verification email
+          </button>
+          <button
+            onClick={onSwitchToLogin}
+            className="w-full bg-amber-600 text-white py-3 rounded-lg font-semibold hover:bg-amber-700 transition"
+          >
+            Back to Login
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-6">
@@ -38,7 +82,7 @@ const Register = ({ onSwitchToLogin }) => {
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-amber-500"
             required
           />
-          
+
           <input
             type="email"
             placeholder="Email Address"
@@ -47,7 +91,7 @@ const Register = ({ onSwitchToLogin }) => {
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-amber-500"
             required
           />
-          
+
           <input
             type="tel"
             placeholder="Mobile Number (10 digits)"
@@ -57,7 +101,7 @@ const Register = ({ onSwitchToLogin }) => {
             pattern="[0-9]{10}"
             required
           />
-          
+
           <input
             type="password"
             placeholder="Password"
