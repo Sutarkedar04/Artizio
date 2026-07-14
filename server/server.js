@@ -127,6 +127,12 @@ app.use('/api/commissions', commissionRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/community', communityRoutes);
 
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Artizio Backend API is running 🚀",
+  });
+});
 // --------------------
 // 404 Handler
 // --------------------
