@@ -25,16 +25,6 @@ try {
   console.error('❌ Email configuration error:', error.message);
 }
 
-// ✅ Test connection on startup
-if (transporter) {
-  transporter.verify(function(error, success) {
-    if (error) {
-      console.error('❌ Email transporter error:', error);
-    } else {
-      console.log('✅ Email server is ready to send messages');
-    }
-  });
-}
 
 export const sendVerificationEmail = async (email, verificationToken, userName) => {
   const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
