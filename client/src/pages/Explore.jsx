@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Palette, Brush, Star, Lock, Sparkles } from 'lucide-react';
-import HeroSection from '../components/common/HeroSection';
+import { Search, Palette, Brush, Star, Lock, Sparkles, ChevronDown } from 'lucide-react';
+import HeroTextSection from '../components/common/HeroTextSection';
+import FeaturedArtworksCarousel from '../components/common/FeaturedArtworksCarousel';
 import ArtworkCard from '../components/common/ArtworkCard';
 import ArtworkModal from '../components/common/ArtworkModal';
 import { artworkAPI } from '../services/api';
@@ -28,6 +29,9 @@ const Explore = () => {
   const [loading, setLoading] = useState(true);
   const contentRef = useRef(null);
   const titleRef = useRef(null); // "Explore Artworks" heading that grows in sync with the clip-path panel
+  const heroContainerRef = useRef(null); // was HeroSection's containerRef
+
+  const wallArtworks = featuredArtworks?.slice(0, 6) || [];
 
   useEffect(() => {
     fetchArtworks();
@@ -76,79 +80,61 @@ const Explore = () => {
     ? 0
     : Math.max(filteredArtworks.length - GUEST_PREVIEW_LIMIT, 0);
 
+  useEffect(() => {
+    if (loading || !contentRef.current) return;
 
-      useEffect(() => {
-  if (loading || !contentRef.current) return;
+    const ctx = gsap.context(() => {
+      const panel = contentRef.current;
+      const originXPercent = 50;
+      const originYPercent = 30;
+      const finalRadius = 40; // matches panel's own border-radius
 
-  const ctx = gsap.context(() => {
-    const panel = contentRef.current;
-    const originXPercent = 50;
-    const originYPercent = 30;
-    const finalRadius = 40; // matches panel's own border-radius
+      let clipTween;
+      let titleTween;
 
-    let clipTween;
-    let titleTween;
+      const buildAnimation = () => {
+        if (clipTween) {
+          clipTween.scrollTrigger?.kill();
+          clipTween.kill();
+        }
+        if (titleTween) {
+          titleTween.scrollTrigger?.kill();
+          titleTween.kill();
+        }
 
-    const buildAnimation = () => {
-      if (clipTween) {
-        clipTween.scrollTrigger?.kill();
-        clipTween.kill();
-      }
-      if (titleTween) {
-        titleTween.scrollTrigger?.kill();
-        titleTween.kill();
-      }
+        const { width, height } = panel.getBoundingClientRect();
+        const originX = (originXPercent / 100) * width;
+        const originY = (originYPercent / 100) * height;
+        const halfSize = 6; // half the size of the starting "dot"
 
-      const { width, height } = panel.getBoundingClientRect();
-      const originX = (originXPercent / 100) * width;
-      const originY = (originYPercent / 100) * height;
-      const halfSize = 6; // half the size of the starting "dot"
+        const startTop = Math.max(originY - halfSize, 0);
+        const startBottom = Math.max(height - originY - halfSize, 0);
+        const startLeft = Math.max(originX - halfSize, 0);
+        const startRight = Math.max(width - originX - halfSize, 0);
 
-      // Distances from origin to each edge — shrinking these to 0 reveals the full box
-      const startTop = Math.max(originY - halfSize, 0);
-      const startBottom = Math.max(height - originY - halfSize, 0);
-      const startLeft = Math.max(originX - halfSize, 0);
-      const startRight = Math.max(width - originX - halfSize, 0);
+        const state = {
+          top: startTop,
+          right: startRight,
+          bottom: startBottom,
+          left: startLeft,
+          round: halfSize + 40,
+        };
 
-      const state = {
-        top: startTop,
-        right: startRight,
-        bottom: startBottom,
-        left: startLeft,
-        round: halfSize + 40, // large relative to the tiny box = looks fully circular
-      };
+        const applyClip = () => {
+          panel.style.clipPath =
+            `inset(${state.top}px ${state.right}px ${state.bottom}px ${state.left}px round ${state.round}px)`;
+        };
 
-      const applyClip = () => {
-        panel.style.clipPath =
-          `inset(${state.top}px ${state.right}px ${state.bottom}px ${state.left}px round ${state.round}px)`;
-      };
+        applyClip();
 
-      applyClip();
-
-      clipTween = gsap.to(state, {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0,
-        round: finalRadius,
-        ease: 'none',
-        onUpdate: applyClip,
-        scrollTrigger: {
-          trigger: panel,
-          start: 'top bottom',
-          end: 'top top',
-          scrub: true,
-        },
-      });
-
-      // "Explore Artworks" heading grows from small to big in lockstep with the
-      // clip-path reveal below it — same trigger/start/end so they stay in sync.
-      if (titleRef.current) {
-        gsap.set(titleRef.current, { scale: 0.25, opacity: 0.4, transformOrigin: '50% 50%' });
-        titleTween = gsap.to(titleRef.current, {
-          scale: 1,
-          opacity: 1,
+        clipTween = gsap.to(state, {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          round: finalRadius,
           ease: 'none',
+          onUpdate: applyClip,
           scrollTrigger: {
             trigger: panel,
             start: 'top bottom',
@@ -156,25 +142,37 @@ const Explore = () => {
             scrub: true,
           },
         });
-      }
+
+        if (titleRef.current) {
+          gsap.set(titleRef.current, { scale: 0.25, opacity: 0.4, transformOrigin: '50% 50%' });
+          titleTween = gsap.to(titleRef.current, {
+            scale: 1,
+            opacity: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: panel,
+              start: 'top bottom',
+              end: 'top top',
+              scrub: true,
+            },
+          });
+        }
+      };
+
+      buildAnimation();
+      window.addEventListener('resize', buildAnimation);
+
+      return () => window.removeEventListener('resize', buildAnimation);
+    }, contentRef);
+
+    const refreshTimeout = setTimeout(() => ScrollTrigger.refresh(), 300);
+
+    return () => {
+      clearTimeout(refreshTimeout);
+      ctx.revert();
     };
+  }, [visibleArtworks, loading]);
 
-    buildAnimation();
-    window.addEventListener('resize', buildAnimation);
-
-    return () => window.removeEventListener('resize', buildAnimation);
-  }, contentRef);
-
-  const refreshTimeout = setTimeout(() => ScrollTrigger.refresh(), 300);
-
-  return () => {
-    clearTimeout(refreshTimeout);
-    ctx.revert();
-  };
-}, [visibleArtworks, loading]);
-
-  // Sends a logged-out visitor to sign in, with context on *why*, instead of
-  // opening the full artwork modal or the commission/like/comment features.
   const promptSignIn = () => {
     toast.info('Sign in to view artwork details and connect with artists');
     window.dispatchEvent(new CustomEvent('navigate', { detail: 'login' }));
@@ -190,14 +188,73 @@ const Explore = () => {
 
   return (
     <div className="bg-[#1D1B19]" style={{ marginTop: '-2px' }}>
-      {/* Hero Section */}
-      <HeroSection featuredArtworks={featuredArtworks} />
+      {/* ─── HERO SECTION (formerly HeroSection.jsx) ─── */}
+      <section
+        ref={heroContainerRef}
+        className="relative min-h-screen bg-[#181614] overflow-hidden text-[#EDE6D6]"
+        style={{ backgroundColor: '#181614', marginTop: 0, paddingTop: 0 }}
+      >
+        {/* ─── BACKGROUND GRAIN ─── */}
+        <svg className="absolute inset-0 w-full h-full opacity-[0.06] pointer-events-none z-0" aria-hidden="true">
+          <filter id="grain-hero">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain-hero)" />
+        </svg>
+
+        {/* ─── AMBIENT SPOTLIGHT ─── */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
+          style={{
+            width: '80vw',
+            height: '100%',
+            background: 'radial-gradient(ellipse 50% 70% at 50% 40%, rgba(201,162,39,0.08) 0%, rgba(201,162,39,0.02) 45%, transparent 75%)',
+          }}
+        />
+
+        <div className="relative z-20 container mx-auto px-6 flex flex-col justify-center min-h-screen pt-20 md:pt-24 pb-12">
+
+          {/* ─── HERO TEXT SECTION ─── */}
+          <HeroTextSection
+            eyebrow="For Artists, By Artists"
+            title1="Made To"
+            title2="Be Found"
+            subtitle={
+              <>
+                Stop waiting to be discovered. Upload your work and let{' '}
+                <span style={{ color: '#C9A227', fontWeight: 600 }}>Artizio</span> bring the world to you.
+              </>
+            }
+            accentColor="#C9A227"
+            textColor="#EDE6D6"
+          />
+
+          {/* ─── FEATURED ARTWORKS CAROUSEL ─── */}
+          <div className="mt-16 md:mt-30">
+            <FeaturedArtworksCarousel
+              artworks={wallArtworks}
+              accentColor="#C9A227"
+              textColor="#EDE6D6"
+            />
+          </div>
+
+          {/* ─── SCROLL INDICATOR ─── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.8, duration: 0.8 }}
+            className="flex justify-center mt-8 md:mt-12"
+          >
+            <ChevronDown size={22} className="text-[#EDE6D6]/30 animate-bounce" />
+          </motion.div>
+        </div>
+      </section>
 
       {/* Dark background wrapper */}
       <div className="relative mt-16 md:mt-24" style={{ backgroundColor: '#1D1B19', paddingBottom: '20px' }}>
         <div className="relative" style={{ maxWidth: '100%' }}>
 
-          {/* "Explore Artworks" heading — sits above the clip-path panel and grows in sync with it */}
           <div
             ref={titleRef}
             className="text-center mb-6 md:mb-10 px-4"
@@ -211,7 +268,6 @@ const Explore = () => {
             </h2>
           </div>
 
-          {/* Content — always fully rendered, full width */}
           <div
             ref={contentRef}
             className="relative px-4 py-8 mx-auto"
@@ -227,8 +283,6 @@ const Explore = () => {
               overflow: 'hidden',
             }}
           >
-
-            {/* Search Bar */}
             <div className="max-w-2xl mx-auto mb-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -242,7 +296,6 @@ const Explore = () => {
               </div>
             </div>
 
-            {/* Categories */}
             <div className="flex flex-wrap justify-center gap-2 mb-6">
               {CATEGORIES.map(cat => (
                 <button
@@ -259,84 +312,79 @@ const Explore = () => {
               ))}
             </div>
 
-            {/* Results Count */}
             <div className="text-center mb-4">
               <p className="text-gray-600 text-sm">
                 Showing {visibleArtworks.length} of {filteredArtworks.length} artwork{filteredArtworks.length !== 1 ? 's' : ''}
               </p>
             </div>
 
-            {/* Artworks Grid */}
-{loading ? (
-  <div className="flex justify-center items-center h-64">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-amber-600"></div>
-  </div>
-) : filteredArtworks.length === 0 ? (
-  <div className="text-center py-12 bg-white rounded-xl">
-    <Palette size={64} className="mx-auto text-gray-300 mb-4" />
-    <p className="text-gray-500 text-lg">No artworks found</p>
-    <button
-      onClick={() => { setSelectedCategory('all'); setSearchQuery(''); }}
-      className="mt-4 px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition"
-    >
-      Clear Filters
-    </button>
-  </div>
-) : (
-  <>
-    <div  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {visibleArtworks.map((artwork, index) => (
-        <div key={artwork._id} className="artwork-card-item">
-          <ArtworkCard
-            artwork={artwork}
-            index={index}
-            onClick={handleArtworkClick}
-          />
-        </div>
-      ))}
-    </div>
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-amber-600"></div>
+              </div>
+            ) : filteredArtworks.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl">
+                <Palette size={64} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500 text-lg">No artworks found</p>
+                <button
+                  onClick={() => { setSelectedCategory('all'); setSearchQuery(''); }}
+                  className="mt-4 px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {visibleArtworks.map((artwork, index) => (
+                    <div key={artwork._id} className="artwork-card-item">
+                      <ArtworkCard
+                        artwork={artwork}
+                        index={index}
+                        onClick={handleArtworkClick}
+                      />
+                    </div>
+                  ))}
+                </div>
 
-    {/* Sign-in gate: shown to logged-out visitors instead of the rest of the gallery */}
-    {hiddenCount > 0 && (
-      <motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  className="mt-24 relative rounded-2xl overflow-hidden grid"
->
-  {/* Blurred hint — now grid-stacked, not absolute */}
-  <div className="col-start-1 row-start-1 grid grid-cols-2 md:grid-cols-4 gap-3 blur-sm opacity-40 pointer-events-none select-none">
-    {filteredArtworks.slice(GUEST_PREVIEW_LIMIT, GUEST_PREVIEW_LIMIT + 4).map(artwork => (
-      <div key={artwork._id} className="h-40 rounded-xl overflow-hidden bg-gray-200">
-        <img src={artwork.imageUrl} alt="" className="w-full h-full object-cover" />
-      </div>
-    ))}
-  </div>
+                {hiddenCount > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-24 relative rounded-2xl overflow-hidden grid"
+                  >
+                    <div className="col-start-1 row-start-1 grid grid-cols-2 md:grid-cols-4 gap-3 blur-sm opacity-40 pointer-events-none select-none">
+                      {filteredArtworks.slice(GUEST_PREVIEW_LIMIT, GUEST_PREVIEW_LIMIT + 4).map(artwork => (
+                        <div key={artwork._id} className="h-40 rounded-xl overflow-hidden bg-gray-200">
+                          <img src={artwork.imageUrl} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
 
-  {/* Overlay content — same grid cell, but now its natural height sets the row height */}
-  <div className="col-start-1 row-start-1 flex items-center justify-center bg-gradient-to-t from-white via-white/90 to-white/40 py-8">
-    <div className="text-center px-6 max-w-md">
-      <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Lock size={24} className="text-amber-600" />
-      </div>
-      <h3 className="text-xl font-bold text-gray-800 mb-2">
-         More artworks waiting for you
-      </h3>
-      <p className="text-gray-600 mb-6 text-sm">
-        Sign in to explore the full gallery, like and comment on artwork, follow your favorite artists, and request custom commissions.
-      </p>
-      <button
-        onClick={promptSignIn}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition shadow-lg"
-      >
-        <Sparkles size={18} />
-        Sign In to See More
-      </button>
-    </div>
-  </div>
-</motion.div>
-    )}
-  </>
-)}
+                    <div className="col-start-1 row-start-1 flex items-center justify-center bg-gradient-to-t from-white via-white/90 to-white/40 py-8">
+                      <div className="text-center px-6 max-w-md">
+                        <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Lock size={24} className="text-amber-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                          More artworks waiting for you
+                        </h3>
+                        <p className="text-gray-600 mb-6 text-sm">
+                          Sign in to explore the full gallery, like and comment on artwork, follow your favorite artists, and request custom commissions.
+                        </p>
+                        <button
+                          onClick={promptSignIn}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition shadow-lg"
+                        >
+                          <Sparkles size={18} />
+                          Sign In to See More
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

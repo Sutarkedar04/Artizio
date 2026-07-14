@@ -542,17 +542,7 @@ const ArtworkModal = ({ artwork, onClose, onArtworkUpdated, onArtworkDeleted }) 
                 </form>
               ) : (
                 <>
-                  {/* Artist info */}
-                  {artwork.artist && (
-                    <div className="mb-4 flex items-center gap-2">
-                      <img
-                        src={artwork.artist?.profilePicture || '/default-avatar.png'}
-                        alt={artwork.artist?.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <span className="font-medium text-gray-800 text-sm">{artwork.artist?.name || 'Artist'}</span>
-                    </div>
-                  )}
+                  
 
                   {/* Like / comment action bar */}
                   <div className="flex items-center gap-4 py-3 border-y border-gray-100 mb-4">

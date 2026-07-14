@@ -26,14 +26,13 @@ const HeroTextSection = ({
   const underlineRef = useRef(null);
   const subtitleRef = useRef(null);
 
-  useEffect(() => {
+  // src/components/HeroTextSection.jsx
+useEffect(() => {
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const animatedEls = [eyebrowRef.current, line1Ref.current, line2Ref.current, subtitleRef.current];
 
   if (prefersReducedMotion) {
-    gsap.set([eyebrowRef.current, line1Ref.current, line2Ref.current, subtitleRef.current], { 
-      yPercent: 0, 
-      opacity: 1 
-    });
+    gsap.set(animatedEls, { yPercent: 0, opacity: 1 });
     if (underlineRef.current) {
       gsap.set(underlineRef.current, { strokeDashoffset: 0 });
     }
@@ -41,39 +40,52 @@ const HeroTextSection = ({
   }
 
   const ctx = gsap.context(() => {
-    // Set initial states
-    gsap.set([eyebrowRef.current, line1Ref.current, line2Ref.current, subtitleRef.current], { 
-      yPercent: 110,
-      opacity: 0
-    });
+    gsap.set(animatedEls, { yPercent: 110, opacity: 0 });
 
     let underlineLen = 0;
     if (underlineRef.current) {
       underlineLen = underlineRef.current.getTotalLength();
-      gsap.set(underlineRef.current, { 
-        strokeDasharray: underlineLen, 
-        strokeDashoffset: underlineLen 
+      gsap.set(underlineRef.current, {
+        strokeDasharray: underlineLen,
+        strokeDashoffset: underlineLen
       });
     }
 
-    // ---- Scroll-triggered entrance timeline ----
-    // Fires once when the hero scrolls into view, plays forward only.
-    // toggleActions: "play none none none" = play on enter, never reverse/replay.
-    const entranceTl = gsap.timeline({
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: 'top 80%', // fires when hero top hits 80% down the viewport
-        toggleActions: 'play none none none',
-        // markers: true, // uncomment while tuning
-      }
-    })
-      .to(eyebrowRef.current, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, 0.15)
-      .to(line1Ref.current, { yPercent: 0, opacity: 1, duration: 0.95, ease: 'power4.out' }, 0.25)
-      .to(line2Ref.current, { yPercent: 0, opacity: 1, duration: 0.95, ease: 'power4.out' }, 0.35)
-      .to(underlineRef.current, { strokeDashoffset: 0, duration: 0.7, ease: 'power2.inOut' }, 0.5)
-      .to(subtitleRef.current, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, 0.65);
+    // --- Entrance ---
+    // Decided directly from the container's real position instead of
+    // trusting ScrollTrigger's "already past start" detection, which is
+    // sensitive to layout/measurement timing on SPA route changes.
+    const playEntrance = () => {
+      gsap.timeline()
+        .to(eyebrowRef.current, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, 0.15)
+        .to(line1Ref.current, { yPercent: 0, opacity: 1, duration: 0.95, ease: 'power4.out' }, 0.25)
+        .to(line2Ref.current, { yPercent: 0, opacity: 1, duration: 0.95, ease: 'power4.out' }, 0.35)
+        .to(underlineRef.current, { strokeDashoffset: 0, duration: 0.7, ease: 'power2.inOut' }, 0.5)
+        .to(subtitleRef.current, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, 0.65);
+    };
 
-    // ---- Scroll-triggered parallax/fade on exit ----
+    let entranceST = null;
+    const rect = containerRef.current.getBoundingClientRect();
+    const alreadyInView = rect.top < window.innerHeight * 0.8;
+
+    if (alreadyInView) {
+      // Hero is on screen right when this mounts (normal case, since it's
+      // the top of the page) — just play it, no ScrollTrigger needed.
+      playEntrance();
+    } else {
+      // Below the fold at mount — wait for a real scroll-into-view.
+      entranceST = ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: 'top 80%',
+        once: true,
+        onEnter: playEntrance,
+      });
+    }
+
+    // --- Exit (scroll-out parallax/fade) ---
+    // Safe now that scroll always starts at 0 on route change (see
+    // ScrollToTop in App.jsx) — this will correctly read progress: 0
+    // at mount instead of jumping straight to "scrolled past, hide it".
     gsap.timeline({
       scrollTrigger: {
         trigger: containerRef.current,
@@ -86,6 +98,16 @@ const HeroTextSection = ({
       .to([line1Ref.current, line2Ref.current], { yPercent: -60, opacity: 0.15, ease: 'none' }, 0)
       .to(underlineRef.current, { opacity: 0, ease: 'none' }, 0)
       .to(subtitleRef.current, { yPercent: -20, opacity: 0, ease: 'none' }, 0);
+
+    // Recheck measurements once fonts/layout truly settle (handles font
+    // reflow shifting the container's actual pixel position).
+    document.fonts.ready.then(() => {
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+    });
+
+    return () => {
+      entranceST?.kill();
+    };
   }, containerRef);
 
   return () => ctx.revert();

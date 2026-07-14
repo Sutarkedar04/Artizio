@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams
 } from 'react-router-dom';
@@ -42,6 +42,29 @@ const PAGE_TO_PATH = {
   login: '/login',
 };
 
+// Runs as a layout effect (synchronous, before paint, and before any
+// passive `useEffect` elsewhere in the tree — including HeroTextSection's)
+// so that by the time GSAP measures anything, scroll position is
+// guaranteed to already be settled at 0.
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    // Temporarily force `scroll-behavior: auto` so this jump is instant,
+    // overriding any global `scroll-behavior: smooth` CSS (Tailwind
+    // preflight / base styles commonly set this). Passing
+    // `behavior: 'instant'` to scrollTo alone isn't reliably respected
+    // in every browser when smooth-scroll CSS is active, so we override
+    // the CSS directly instead.
+    const root = document.documentElement;
+    const prevBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 0);
+    root.style.scrollBehavior = prevBehavior;
+  }, [pathname]);
+
+  return null;
+};
 // Reverse mapping, best-effort, purely so Navbar/BottomNavbar (which take
 // an `activePage` string prop to highlight the current tab) keep working
 // without being rewritten. If Navbar is ever migrated to <NavLink>, this
@@ -109,6 +132,12 @@ const AppContent = () => {
   const { isLoggedIn, login, register, isAdmin, user } = useAuth();
   const isArtist = user?.role === 'artist' || user?.isArtist === true;
 
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+  
   const prevIsLoggedIn = useRef(isLoggedIn);
 
   // Check if current page is explore (homepage)
@@ -231,6 +260,7 @@ const AppContent = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
       <ToastContainer position="bottom-right" theme="dark" />
+      <ScrollToTop />
       <Navbar
         activePage={pathToPageKey(location.pathname)}
         setActivePage={handleNavAction}
