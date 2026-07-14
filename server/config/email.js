@@ -6,16 +6,17 @@ let transporter = null;
 try {
   if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      // ✅ Add timeouts to prevent hanging
-      connectionTimeout: 5000, // 5 seconds
-      greetingTimeout: 5000,
-      socketTimeout: 10000 // 10 seconds
-    });
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+});
     console.log('✅ Email service configured');
   } else {
     console.log('⚠️ Email credentials not provided. Email notifications disabled.');
